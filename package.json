@@ -1,0 +1,32 @@
+{
+  "name": "facevital",
+  "version": "1.0.0",
+  "description": "Advanced PPG-based health monitoring using face detection",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.0.7",
+    "react": "^19",
+    "react-dom": "^19",
+    "recharts": "2.15.0",
+    "lucide-react": "^0.544.0",
+    "autoprefixer": "^10.4.20",
+    "tailwindcss": "^3.4.17",
+    "tailwind-merge": "^2.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "postcss": "^8.5",
+    "typescript": "5.7.3",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "16.0.7"
+  }
+}
