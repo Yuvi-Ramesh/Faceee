@@ -28,12 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script 
-          src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.9/vision_bundle.js"
-          onError={() => {
-            console.error('[v0] Failed to load MediaPipe from CDN');
-          }}
-        />
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.9/vision_bundle.js" />
       </head>
       <body className={inter.className}>{children}</body>
     </html>
