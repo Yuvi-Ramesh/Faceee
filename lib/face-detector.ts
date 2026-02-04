@@ -35,14 +35,17 @@ function waitForVision(maxAttempts = 150): Promise<any> {
     
     const checkVision = () => {
       const vision = (window as any).VisionTasksVision;
-      if (vision) {
+      if (vision && vision.FaceLandmarker) {
         console.log('[v0] MediaPipe Vision library loaded successfully');
         resolve(vision);
       } else if (attempts < maxAttempts) {
         attempts++;
+        if (attempts % 20 === 0) {
+          console.log(`[v0] Waiting for MediaPipe Vision... (${attempts}/${maxAttempts})`);
+        }
         setTimeout(checkVision, 100);
       } else {
-        reject(new Error("MediaPipe Vision Tasks library failed to load. Check your internet connection and try refreshing the page."));
+        reject(new Error("MediaPipe Vision Tasks library failed to load. The script may be blocked or your internet connection is down."));
       }
     };
     
@@ -66,46 +69,46 @@ export async function initializeFaceDetector(): Promise<void> {
       // Wait for MediaPipe Vision Tasks to load
       const vision = await waitForVision();
       
-      if (!vision) {
-        throw new Error("MediaPipe Vision Tasks library is not available");
+      if (!vision || !vision.FaceLandmarker) {
+        throw new Error("MediaPipe Vision Tasks library or FaceLandmarker is not available");
       }
 
       console.log('[v0] MediaPipe Vision available, loading face landmarker model...');
 
-      // Use local API endpoint to proxy the model
-      const modelUrl = '/api/mediapipe-model?model=face_landmarker';
+      // Use the official Google CDN URL directly for model
+      const modelUrl = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 
-      // Create FaceLandmarker with fallback to CPU if GPU fails
+      // Create FaceLandmarker with CPU delegate first (more compatible)
       try {
-        console.log('[v0] Attempting GPU delegate initialization...');
+        console.log('[v0] Initializing Face Landmarker with CPU delegate...');
         faceDetector = await vision.FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: modelUrl,
-            delegate: "GPU",
+            delegate: "CPU",
           },
           runningMode: "VIDEO",
           numFaces: 1,
           outputFaceExpressions: false,
           outputHeadRotation: false,
         });
-        console.log('[v0] GPU delegate initialized successfully');
-      } catch (gpuError) {
-        console.warn("[v0] GPU delegate failed, falling back to CPU:", gpuError);
+        console.log('[v0] Face Landmarker initialized successfully with CPU delegate');
+      } catch (cpuError) {
+        console.error('[v0] CPU delegate failed, attempting GPU:', cpuError);
         try {
           faceDetector = await vision.FaceLandmarker.createFromOptions(vision, {
             baseOptions: {
               modelAssetPath: modelUrl,
-              delegate: "CPU",
+              delegate: "GPU",
             },
             runningMode: "VIDEO",
             numFaces: 1,
             outputFaceExpressions: false,
             outputHeadRotation: false,
           });
-          console.log('[v0] CPU delegate initialized successfully');
-        } catch (cpuError) {
-          console.error('[v0] Both GPU and CPU delegates failed:', cpuError);
-          throw new Error("Failed to initialize face landmarker with both GPU and CPU delegates");
+          console.log('[v0] Face Landmarker initialized successfully with GPU delegate');
+        } catch (gpuError) {
+          console.error('[v0] Both CPU and GPU delegates failed:', gpuError);
+          throw new Error("Failed to initialize face landmarker. Model may not be accessible.");
         }
       }
 

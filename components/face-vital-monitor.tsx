@@ -91,50 +91,57 @@ export function FaceVitalMonitor() {
   // Initialize face detector
   useEffect(() => {
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
+    let mounted = true;
     
     const init = async () => {
+      if (!mounted) return;
+      
       try {
         if (retryCount === 0) {
+          console.log('[v0] Starting initial face detector load');
           setAlert({
             type: "info",
-            message: "Loading face detection model...",
+            message: "Initializing face detection model. This may take 10-30 seconds...",
           });
         } else {
+          console.log(`[v0] Retry attempt ${retryCount + 1}/${maxRetries}`);
           setAlert({
             type: "info",
-            message: `Retrying face detector initialization (${retryCount}/${maxRetries})...`,
+            message: `Retrying initialization (${retryCount}/${maxRetries})...`,
           });
         }
         
-        console.log('[v0] Initializing face detector, attempt:', retryCount + 1);
         await initializeFaceDetector();
-        setDetectorReady(true);
-        setAlert({
-          type: "success",
-          message: "Face detector ready. Click Camera On to begin.",
-        });
-        console.log('[v0] Face detector initialized successfully');
+        
+        if (mounted) {
+          setDetectorReady(true);
+          setAlert({
+            type: "success",
+            message: "Face detector ready. Click Camera On to begin.",
+          });
+          console.log('[v0] Face detector initialized successfully');
+        }
       } catch (error) {
         console.error("[v0] Detector init error:", error);
         const errorMsg = error instanceof Error ? error.message : "Unknown error";
         
         retryCount++;
         
-        if (retryCount < maxRetries) {
+        if (retryCount < maxRetries && mounted) {
           setAlert({
             type: "warning",
-            message: `Face detector loading... (Attempt ${retryCount + 1}/${maxRetries})`,
+            message: `Retrying in 2 seconds... (Attempt ${retryCount + 1}/${maxRetries})`,
           });
           
-          // Retry after 3 seconds
+          // Retry after 2 seconds
           setTimeout(() => {
-            init();
-          }, 3000);
-        } else {
+            if (mounted) init();
+          }, 2000);
+        } else if (mounted) {
           setAlert({
             type: "error",
-            message: `Face detector failed after ${maxRetries} attempts: ${errorMsg}. Please refresh the page or check your internet connection.`,
+            message: `Unable to initialize face detector after ${maxRetries} attempts. ${errorMsg}. Try refreshing the page.`,
           });
           console.error('[v0] Face detector initialization failed after max retries');
         }
@@ -142,6 +149,10 @@ export function FaceVitalMonitor() {
     };
 
     init();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Start camera
