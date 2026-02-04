@@ -92,6 +92,11 @@ export function FaceVitalMonitor() {
   useEffect(() => {
     const init = async () => {
       try {
+        setAlert({
+          type: "info",
+          message: "Loading face detection model...",
+        });
+        
         await initializeFaceDetector();
         setDetectorReady(true);
         setAlert({
@@ -100,10 +105,16 @@ export function FaceVitalMonitor() {
         });
       } catch (error) {
         console.error("[v0] Detector init error:", error);
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
         setAlert({
           type: "error",
-          message: "Face detector failed to load. Please refresh.",
+          message: `Face detector failed: ${errorMsg}. Try refreshing the page.`,
         });
+        
+        // Retry after 5 seconds
+        setTimeout(() => {
+          init();
+        }, 5000);
       }
     };
 

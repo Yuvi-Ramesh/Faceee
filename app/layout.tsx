@@ -27,6 +27,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.9/vision_bundle.js"></script>
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   );
