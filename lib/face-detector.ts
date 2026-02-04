@@ -29,19 +29,20 @@ let initPromise: Promise<void> | null = null;
 /**
  * Wait for MediaPipe Vision to be available
  */
-function waitForVision(maxAttempts = 100): Promise<any> {
+function waitForVision(maxAttempts = 150): Promise<any> {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     
     const checkVision = () => {
       const vision = (window as any).VisionTasksVision;
       if (vision) {
+        console.log('[v0] MediaPipe Vision library loaded successfully');
         resolve(vision);
       } else if (attempts < maxAttempts) {
         attempts++;
         setTimeout(checkVision, 100);
       } else {
-        reject(new Error("MediaPipe Vision Tasks failed to load after maximum attempts"));
+        reject(new Error("MediaPipe Vision Tasks library failed to load. Check your internet connection and try refreshing the page."));
       }
     };
     
@@ -60,18 +61,26 @@ export async function initializeFaceDetector(): Promise<void> {
 
   initPromise = (async () => {
     try {
+      console.log('[v0] Starting face detector initialization...');
+      
       // Wait for MediaPipe Vision Tasks to load
       const vision = await waitForVision();
       
       if (!vision) {
-        throw new Error("MediaPipe Vision Tasks failed to load");
+        throw new Error("MediaPipe Vision Tasks library is not available");
       }
+
+      console.log('[v0] MediaPipe Vision available, loading face landmarker model...');
+
+      // Use local API endpoint to proxy the model
+      const modelUrl = '/api/mediapipe-model?model=face_landmarker';
 
       // Create FaceLandmarker with fallback to CPU if GPU fails
       try {
+        console.log('[v0] Attempting GPU delegate initialization...');
         faceDetector = await vision.FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+            modelAssetPath: modelUrl,
             delegate: "GPU",
           },
           runningMode: "VIDEO",
@@ -79,24 +88,32 @@ export async function initializeFaceDetector(): Promise<void> {
           outputFaceExpressions: false,
           outputHeadRotation: false,
         });
+        console.log('[v0] GPU delegate initialized successfully');
       } catch (gpuError) {
         console.warn("[v0] GPU delegate failed, falling back to CPU:", gpuError);
-        faceDetector = await vision.FaceLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
-            delegate: "CPU",
-          },
-          runningMode: "VIDEO",
-          numFaces: 1,
-          outputFaceExpressions: false,
-          outputHeadRotation: false,
-        });
+        try {
+          faceDetector = await vision.FaceLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: modelUrl,
+              delegate: "CPU",
+            },
+            runningMode: "VIDEO",
+            numFaces: 1,
+            outputFaceExpressions: false,
+            outputHeadRotation: false,
+          });
+          console.log('[v0] CPU delegate initialized successfully');
+        } catch (cpuError) {
+          console.error('[v0] Both GPU and CPU delegates failed:', cpuError);
+          throw new Error("Failed to initialize face landmarker with both GPU and CPU delegates");
+        }
       }
 
-      console.log("[v0] Face Landmarker initialized successfully");
+      console.log("[v0] Face Landmarker fully initialized and ready");
     } catch (error) {
       console.error("[v0] Failed to initialize face detector:", error);
       isInitializing = false;
+      initPromise = null;
       throw error;
     } finally {
       isInitializing = false;

@@ -90,31 +90,54 @@ export function FaceVitalMonitor() {
 
   // Initialize face detector
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 3;
+    
     const init = async () => {
       try {
-        setAlert({
-          type: "info",
-          message: "Loading face detection model...",
-        });
+        if (retryCount === 0) {
+          setAlert({
+            type: "info",
+            message: "Loading face detection model...",
+          });
+        } else {
+          setAlert({
+            type: "info",
+            message: `Retrying face detector initialization (${retryCount}/${maxRetries})...`,
+          });
+        }
         
+        console.log('[v0] Initializing face detector, attempt:', retryCount + 1);
         await initializeFaceDetector();
         setDetectorReady(true);
         setAlert({
           type: "success",
           message: "Face detector ready. Click Camera On to begin.",
         });
+        console.log('[v0] Face detector initialized successfully');
       } catch (error) {
         console.error("[v0] Detector init error:", error);
         const errorMsg = error instanceof Error ? error.message : "Unknown error";
-        setAlert({
-          type: "error",
-          message: `Face detector failed: ${errorMsg}. Try refreshing the page.`,
-        });
         
-        // Retry after 5 seconds
-        setTimeout(() => {
-          init();
-        }, 5000);
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          setAlert({
+            type: "warning",
+            message: `Face detector loading... (Attempt ${retryCount + 1}/${maxRetries})`,
+          });
+          
+          // Retry after 3 seconds
+          setTimeout(() => {
+            init();
+          }, 3000);
+        } else {
+          setAlert({
+            type: "error",
+            message: `Face detector failed after ${maxRetries} attempts: ${errorMsg}. Please refresh the page or check your internet connection.`,
+          });
+          console.error('[v0] Face detector initialization failed after max retries');
+        }
       }
     };
 
